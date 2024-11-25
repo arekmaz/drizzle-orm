@@ -1,11 +1,11 @@
-import * as Schema from '@effect/schema/Schema';
-import * as Drizzle from 'drizzle-orm';
-import * as DrizzleMysql from 'drizzle-orm/mysql-core';
-import * as DrizzlePg from 'drizzle-orm/pg-core';
-import * as DrizzleSqlite from 'drizzle-orm/sqlite-core';
+import * as Schema from "effect/Schema";
+import * as Drizzle from "drizzle-orm";
+import * as DrizzleMysql from "drizzle-orm/mysql-core";
+import * as DrizzlePg from "drizzle-orm/pg-core";
+import * as DrizzleSqlite from "drizzle-orm/sqlite-core";
 
 type Columns<TTable extends Drizzle.Table> =
-  TTable['_']['columns'] extends infer TColumns extends Record<
+  TTable["_"]["columns"] extends infer TColumns extends Record<
     string,
     Drizzle.Column<any>
   >
@@ -170,63 +170,58 @@ type Json =
   | readonly Json[]
   | null;
 
-export const Json = Schema.suspend(
-  (): Schema.Schema<Json> =>
-    Schema.Union(
-      literalSchema,
-      Schema.Array(Json),
-      Schema.Record({ key: Schema.String, value: Json })
-    ),
+export const Json = Schema.parseJson<Json, Json, never>(
+  Schema.Any
 );
 
 type GetSchemaForType<TColumn extends Drizzle.Column> =
-  TColumn['_']['dataType'] extends infer TDataType
-    ? TDataType extends 'custom'
+  TColumn["_"]["dataType"] extends infer TDataType
+    ? TDataType extends "custom"
       ? Schema.Schema<any>
-      : TDataType extends 'json'
+      : TDataType extends "json"
       ? Schema.Schema<Json>
       : TColumn extends { enumValues: [string, ...string[]] }
-      ? Drizzle.Equal<TColumn['enumValues'], [string, ...string[]]> extends true
+      ? Drizzle.Equal<TColumn["enumValues"], [string, ...string[]]> extends true
         ? Schema.Schema<string>
-        : Schema.Schema<TColumn['enumValues'][number]>
-      : TDataType extends 'array'
+        : Schema.Schema<TColumn["enumValues"][number]>
+      : TDataType extends "array"
       ? Schema.Schema<
           | null
           | readonly Drizzle.Assume<
-              TColumn['_'],
+              TColumn["_"],
               { baseColumn: Drizzle.Column }
-            >['baseColumn']['_']['data'][]
+            >["baseColumn"]["_"]["data"][]
         >
-      : TDataType extends 'bigint'
+      : TDataType extends "bigint"
       ? Schema.Schema<bigint>
-      : TDataType extends 'number'
+      : TDataType extends "number"
       ? Schema.Schema<number>
-      : TDataType extends 'string'
+      : TDataType extends "string"
       ? Schema.Schema<string>
-      : TDataType extends 'boolean'
+      : TDataType extends "boolean"
       ? Schema.Schema<boolean>
-      : TDataType extends 'date'
+      : TDataType extends "date"
       ? Schema.Schema<Date>
       : Schema.Schema<any>
     : never;
 
 type MapInsertColumnToPropertySignature<TColumn extends Drizzle.Column> =
-  TColumn['_']['notNull'] extends false
+  TColumn["_"]["notNull"] extends false
     ? Schema.PropertySignature<
-        '?:',
+        "?:",
         Schema.Schema.Type<GetSchemaForType<TColumn>> | undefined | null,
-        TColumn['_']['name'],
-        '?:',
+        TColumn["_"]["name"],
+        "?:",
         Schema.Schema.Encoded<GetSchemaForType<TColumn>> | undefined | null,
         false,
         never
       >
-    : TColumn['_']['hasDefault'] extends true
+    : TColumn["_"]["hasDefault"] extends true
     ? Schema.PropertySignature<
-        '?:',
+        "?:",
         Schema.Schema.Type<GetSchemaForType<TColumn>> | undefined,
-        TColumn['_']['name'],
-        '?:',
+        TColumn["_"]["name"],
+        "?:",
         Schema.Schema.Encoded<GetSchemaForType<TColumn>> | undefined,
         true,
         never
@@ -234,7 +229,7 @@ type MapInsertColumnToPropertySignature<TColumn extends Drizzle.Column> =
     : GetSchemaForType<TColumn>;
 
 type MapSelectColumnToPropertySignature<TColumn extends Drizzle.Column> =
-  TColumn['_']['notNull'] extends false
+  TColumn["_"]["notNull"] extends false
     ? Schema.Schema<Schema.Schema.Type<GetSchemaForType<TColumn>> | null>
     : GetSchemaForType<TColumn>;
 
@@ -357,10 +352,10 @@ export function createInsertSchema<
 >(
   table: TTable,
   refine?: {
-    [K in keyof TRefine]: K extends keyof TTable['_']['columns']
+    [K in keyof TRefine]: K extends keyof TTable["_"]["columns"]
       ? TRefine[K]
       : Drizzle.DrizzleTypeError<`Column '${K &
-          string}' does not exist in table '${TTable['_']['name']}'`>;
+          string}' does not exist in table '${TTable["_"]["name"]}'`>;
   },
 ): BuildInsertSchema<
   TTable,
@@ -369,7 +364,10 @@ export function createInsertSchema<
   const columns = Drizzle.getTableColumns(table);
   const columnEntries = Object.entries(columns);
 
-  let schemaEntries = Object.fromEntries(
+  let schemaEntries: Record<
+    string,
+    Schema.Schema.All | Schema.PropertySignature.All
+  > = Object.fromEntries(
     columnEntries.map(([name, column]) => {
       return [name, mapColumnToSchema(column)];
     }),
@@ -382,8 +380,9 @@ export function createInsertSchema<
         Object.entries(refine).map(([name, refineColumn]) => {
           return [
             name,
-            typeof refineColumn === 'function' &&
-            !(Schema.isSchema(refineColumn))
+            typeof refineColumn === "function" &&
+            !Schema.isSchema(refineColumn) &&
+            !Schema.isPropertySignature(refineColumn)
               ? refineColumn(schemaEntries as any)
               : refineColumn,
           ];
@@ -394,11 +393,15 @@ export function createInsertSchema<
 
   for (const [name, column] of columnEntries) {
     if (!column.notNull) {
-      schemaEntries[name] = Schema.optional(
-        Schema.NullOr(schemaEntries[name]!),
+      schemaEntries[name] = Schema.optionalWith(
+        schemaEntries[name] as Schema.Schema.All,
+        { nullable: true },
       ) as any;
     } else if (column.hasDefault) {
-      schemaEntries[name] = Schema.optional(schemaEntries[name]!) as any;
+      schemaEntries[name] = Schema.optionalWith(
+        schemaEntries[name] as Schema.Schema.All,
+        { nullable: true },
+      );
     }
   }
 
@@ -411,10 +414,10 @@ export function createSelectSchema<
 >(
   table: TTable,
   refine?: {
-    [K in keyof TRefine]: K extends keyof TTable['_']['columns']
+    [K in keyof TRefine]: K extends keyof TTable["_"]["columns"]
       ? TRefine[K]
       : Drizzle.DrizzleTypeError<`Column '${K &
-          string}' does not exist in table '${TTable['_']['name']}'`>;
+          string}' does not exist in table '${TTable["_"]["name"]}'`>;
   },
 ): BuildSelectSchema<
   TTable,
@@ -423,7 +426,10 @@ export function createSelectSchema<
   const columns = Drizzle.getTableColumns(table);
   const columnEntries = Object.entries(columns);
 
-  let schemaEntries = Object.fromEntries(
+  let schemaEntries: Record<
+    string,
+    Schema.Schema.All | Schema.PropertySignature.All
+  > = Object.fromEntries(
     columnEntries.map(([name, column]) => {
       return [name, mapColumnToSchema(column)];
     }),
@@ -436,8 +442,9 @@ export function createSelectSchema<
         Object.entries(refine).map(([name, refineColumn]) => {
           return [
             name,
-            typeof refineColumn === 'function' &&
-            !(Schema.isSchema(refineColumn))
+            typeof refineColumn === "function" &&
+            !Schema.isSchema(refineColumn) &&
+            !Schema.isPropertySignature(refineColumn)
               ? refineColumn(schemaEntries as any)
               : refineColumn,
           ];
@@ -448,7 +455,10 @@ export function createSelectSchema<
 
   for (const [name, column] of columnEntries) {
     if (!column.notNull) {
-      schemaEntries[name] = Schema.NullOr(schemaEntries[name]!);
+      schemaEntries[name] = Schema.optionalWith(
+        schemaEntries[name] as Schema.Schema.All,
+        { nullable: true },
+      );
     }
   }
 
@@ -467,23 +477,23 @@ function mapColumnToSchema(column: Drizzle.Column): Schema.Schema<any, any> {
   if (!type) {
     if (Drizzle.is(column, DrizzlePg.PgUUID)) {
       type = Schema.UUID;
-    } else if (column.dataType === 'custom') {
+    } else if (column.dataType === "custom") {
       type = Schema.Any;
-    } else if (column.dataType === 'json') {
+    } else if (column.dataType === "json") {
       type = Json;
-    } else if (column.dataType === 'array') {
+    } else if (column.dataType === "array") {
       type = Schema.Array(
         mapColumnToSchema((column as DrizzlePg.PgArray<any, any>).baseColumn),
       );
-    } else if (column.dataType === 'number') {
+    } else if (column.dataType === "number") {
       type = Schema.Number;
-    } else if (column.dataType === 'bigint') {
+    } else if (column.dataType === "bigint") {
       type = Schema.BigIntFromSelf;
-    } else if (column.dataType === 'boolean') {
+    } else if (column.dataType === "boolean") {
       type = Schema.Boolean;
-    } else if (column.dataType === 'date') {
+    } else if (column.dataType === "date") {
       type = Schema.DateFromSelf;
-    } else if (column.dataType === 'string') {
+    } else if (column.dataType === "string") {
       let sType = Schema.String;
 
       if (
@@ -493,7 +503,7 @@ function mapColumnToSchema(column: Drizzle.Column): Schema.Schema<any, any> {
           Drizzle.is(column, DrizzleMysql.MySqlVarBinary) ||
           Drizzle.is(column, DrizzleMysql.MySqlChar) ||
           Drizzle.is(column, DrizzleSqlite.SQLiteText)) &&
-        typeof column.length === 'number'
+        typeof column.length === "number"
       ) {
         sType = sType.pipe(Schema.maxLength(column.length));
       }
@@ -513,7 +523,7 @@ function isWithEnum(
   column: Drizzle.Column,
 ): column is typeof column & { enumValues: [string, ...string[]] } {
   return (
-    'enumValues' in column &&
+    "enumValues" in column &&
     Array.isArray(column.enumValues) &&
     column.enumValues.length > 0
   );

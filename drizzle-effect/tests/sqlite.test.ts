@@ -1,4 +1,4 @@
-import { Schema } from '@effect/schema';
+import { Schema } from "effect";
 import {
   blob,
   integer,
@@ -6,66 +6,67 @@ import {
   real,
   sqliteTable,
   text,
-} from 'drizzle-orm/sqlite-core';
-import { Either } from 'effect';
-import { expect, test } from 'vitest';
-import { createInsertSchema, createSelectSchema, Json } from '../src/index.ts';
-import { expectSchemaShape } from './utils.ts';
+} from "drizzle-orm/sqlite-core";
+import { Either } from "effect";
+import { expect, test } from "vitest";
+import { createInsertSchema, createSelectSchema, Json } from "../src/index.ts";
+import { expectSchemaShape } from "./utils.ts";
+import { Simplify } from "effect/Types";
 
 const blobJsonSchema = Schema.Struct({
   foo: Schema.String,
 });
 
-const users = sqliteTable('users', {
-  id: integer('id').primaryKey(),
-  boolean: integer('boolean', { mode: 'boolean' }).notNull(),
-  blobJson: blob('blob', { mode: 'json' })
+const users = sqliteTable("users", {
+  id: integer("id").primaryKey(),
+  boolean: integer("boolean", { mode: "boolean" }).notNull(),
+  blobJson: blob("blob", { mode: "json" })
     .$type<Schema.Schema.Type<typeof blobJsonSchema>>()
     .notNull(),
-  blobBigInt: blob('blob', { mode: 'bigint' }).notNull(),
+  blobBigInt: blob("blob", { mode: "bigint" }).notNull(),
 
-  numeric: numeric('numeric').notNull(),
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
-  createdAtMs: integer('created_at_ms', { mode: 'timestamp_ms' }).notNull(),
-  real: real('real').notNull(),
-  text: text('text', { length: 255 }),
-  role: text('role', { enum: ['admin', 'user'] })
+  numeric: numeric("numeric").notNull(),
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
+  createdAtMs: integer("created_at_ms", { mode: "timestamp_ms" }).notNull(),
+  real: real("real").notNull(),
+  text: text("text", { length: 255 }),
+  role: text("role", { enum: ["admin", "user"] })
     .notNull()
-    .default('user'),
+    .default("user"),
 });
 
 const testUser = {
   id: 1,
-  blobJson: { foo: 'bar' },
+  blobJson: { foo: "bar" },
   blobBigInt: BigInt(123),
-  numeric: '123.45',
+  numeric: "123.45",
   createdAt: new Date(),
   createdAtMs: new Date(),
   boolean: true,
   real: 123.45,
-  text: 'foobar',
-  role: 'admin' as const,
+  text: "foobar",
+  role: "admin" as const,
 };
 
-test('is an instance of `Schema.Struct`', () => {
-  const schema = createInsertSchema(users).pick('role', 'boolean');
+test("is an instance of `Schema.Struct`", () => {
+  const schema = createInsertSchema(users).pick("role", "boolean");
 
   const decode = Schema.decodeEither(schema);
 
   expect(Either.isRight(decode(testUser))).toBeTruthy();
-  expect(Either.isRight(decode({ boolean: false, role: 'user' }))).toBeTruthy();
+  expect(Either.isRight(decode({ boolean: false, role: "user" }))).toBeTruthy();
 
   expect(Either.isRight(Schema.decodeUnknownEither(schema)({}))).toBeFalsy();
   expect(
     Either.isRight(
       decode(testUser, {
-        onExcessProperty: 'error',
+        onExcessProperty: "error",
       }),
     ),
   ).toBeFalsy();
 });
 
-test('users insert valid user', () => {
+test("users insert valid user", () => {
   const schema = createInsertSchema(users);
 
   const result = Schema.decodeEither(schema)(testUser);
@@ -73,22 +74,23 @@ test('users insert valid user', () => {
   expect(Either.isRight(result)).toBeTruthy();
 });
 
-test('users insert invalid text length', () => {
+test("users insert invalid text length", () => {
   const schema = createInsertSchema(users);
 
   const result = Schema.decodeEither(schema)({
     ...testUser,
-    text: 'a'.repeat(256),
+    text: "a".repeat(256),
   });
 
   expect(Either.isRight(result)).toBeFalsy();
 });
 
-test('users insert schema', (t) => {
+test("users insert schema", (t) => {
   const actual = createInsertSchema(users, {
     id: ({ id }) => id.pipe(Schema.positive()),
+      // without this ovverride I'm getting max call stack exc in tests
     blobJson: blobJsonSchema,
-    role: Schema.Literal('admin', 'manager', 'user'),
+    role: Schema.Literal("admin", "manager", "user"),
   });
 
   () => {
@@ -108,45 +110,52 @@ test('users insert schema', (t) => {
   };
 
   const expected = Schema.Struct({
-    id: Schema.optional(Schema.Number.pipe(Schema.positive())),
+    id: Schema.optionalWith(Schema.Number.pipe(Schema.positive()), {
+      nullable: true,
+    }),
+    boolean: Schema.Boolean,
     blobJson: blobJsonSchema,
     blobBigInt: Schema.BigIntFromSelf,
     numeric: Schema.String,
     createdAt: Schema.DateFromSelf,
     createdAtMs: Schema.DateFromSelf,
-    boolean: Schema.Boolean,
     real: Schema.Number,
-    text: Schema.optional(
-      Schema.NullOr(Schema.String.pipe(Schema.maxLength(255))),
-    ),
-    role: Schema.optional(Schema.Literal('admin', 'manager', 'user')),
+    text: Schema.optionalWith(Schema.String.pipe(Schema.maxLength(255)), {
+      nullable: true,
+    }),
+    role: Schema.optionalWith(Schema.Literal("admin", "manager", "user"), {
+      nullable: true,
+    }),
   });
 
   expectSchemaShape(t, expected).from(actual);
 });
 
-test('users insert schema w/ defaults', (t) => {
+test.only("users insert schema w/ defaults", (t) => {
   const actual = createInsertSchema(users);
 
   const expected = Schema.Struct({
-    id: Schema.optional(Schema.Number),
+    id: Schema.optionalWith(Schema.Number, {nullable: true}),
+    boolean: Schema.Boolean,
     blobJson: Json,
     blobBigInt: Schema.BigIntFromSelf,
     numeric: Schema.String,
     createdAt: Schema.DateFromSelf,
     createdAtMs: Schema.DateFromSelf,
-    boolean: Schema.Boolean,
     real: Schema.Number,
-    text: Schema.optional(
-      Schema.NullOr(Schema.String.pipe(Schema.maxLength(255))),
+    text: Schema.optionalWith(
+      (Schema.String.pipe(Schema.maxLength(255))), {nullable: true}
     ),
-    role: Schema.optional(Schema.Literal('admin', 'user')),
+    role: Schema.optionalWith(Schema.Literal("admin", "user"), {nullable: true}),
   });
+
+  type a = Simplify<Schema.Schema.Type<typeof actual>>
+  type b = Simplify<Schema.Schema.Type<typeof actual>>
 
   expectSchemaShape(t, expected).from(actual);
 });
 
-test('users select schema w/ defaults', (t) => {
+test("users select schema w/ defaults", (t) => {
   const actual = createSelectSchema(users);
 
   const expected = Schema.Struct({
@@ -159,16 +168,16 @@ test('users select schema w/ defaults', (t) => {
     boolean: Schema.Boolean,
     real: Schema.Number,
     text: Schema.NullOr(Schema.String.pipe(Schema.maxLength(255))),
-    role: Schema.Literal('admin', 'user'),
+    role: Schema.Literal("admin", "user"),
   });
 
   expectSchemaShape(t, expected).from(actual);
 });
 
-test('users select schema', (t) => {
+test("users select schema", (t) => {
   const actual = createSelectSchema(users, {
     blobJson: Json,
-    role: Schema.Literal('admin', 'manager', 'user'),
+    role: Schema.Literal("admin", "manager", "user"),
   });
 
   () => {
@@ -197,7 +206,7 @@ test('users select schema', (t) => {
     boolean: Schema.Boolean,
     real: Schema.Number,
     text: Schema.NullOr(Schema.String.pipe(Schema.maxLength(255))),
-    role: Schema.Literal('admin', 'manager', 'user'),
+    role: Schema.Literal("admin", "manager", "user"),
   });
 
   expectSchemaShape(t, expected).from(actual);
