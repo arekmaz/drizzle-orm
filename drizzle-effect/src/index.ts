@@ -455,10 +455,8 @@ export function createSelectSchema<
 
   for (const [name, column] of columnEntries) {
     if (!column.notNull) {
-      schemaEntries[name] = Schema.optionalWith(
-        schemaEntries[name] as Schema.Schema.All,
-        { nullable: true },
-      );
+      schemaEntries[name] = 
+        Schema.NullOr(schemaEntries[name] as Schema.Schema.All)
     }
   }
 

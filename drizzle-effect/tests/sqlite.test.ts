@@ -131,7 +131,7 @@ test("users insert schema", (t) => {
   expectSchemaShape(t, expected).from(actual);
 });
 
-test.only("users insert schema w/ defaults", (t) => {
+test("users insert schema w/ defaults", (t) => {
   const actual = createInsertSchema(users);
 
   const expected = Schema.Struct({
@@ -160,21 +160,24 @@ test("users select schema w/ defaults", (t) => {
 
   const expected = Schema.Struct({
     id: Schema.Number,
+    boolean: Schema.Boolean,
     blobJson: Json,
     blobBigInt: Schema.BigIntFromSelf,
     numeric: Schema.String,
     createdAt: Schema.DateFromSelf,
     createdAtMs: Schema.DateFromSelf,
-    boolean: Schema.Boolean,
     real: Schema.Number,
     text: Schema.NullOr(Schema.String.pipe(Schema.maxLength(255))),
     role: Schema.Literal("admin", "user"),
   });
 
+  type a = Simplify<Schema.Schema.Type<typeof actual>>
+  type b = Simplify<Schema.Schema.Type<typeof actual>>
+
   expectSchemaShape(t, expected).from(actual);
 });
 
-test("users select schema", (t) => {
+test.only("users select schema", (t) => {
   const actual = createSelectSchema(users, {
     blobJson: Json,
     role: Schema.Literal("admin", "manager", "user"),
