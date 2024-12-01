@@ -11,7 +11,6 @@ import { Either } from "effect";
 import { expect, test } from "vitest";
 import { createInsertSchema, createSelectSchema, Json } from "../src/index.ts";
 import { expectSchemaShape } from "./utils.ts";
-import { Simplify } from "effect/Types";
 
 const blobJsonSchema = Schema.Struct({
   foo: Schema.String,
@@ -124,7 +123,6 @@ test("users insert schema", (t) => {
     role: Schema.optional(Schema.Literal("admin", "manager", "user")),
   });
 
-  type a = Simplify<Schema.Schema.Type<typeof actual>>;
   type actual = {
     readonly id?: number | undefined;
     readonly blobJson: {
@@ -151,7 +149,6 @@ test("users insert schema", (t) => {
     readonly text?: string | null | undefined;
     readonly role?: "admin" | "user" | "manager" | null | undefined;
   };
-  type b = Simplify<Schema.Schema.Type<typeof expected>>;
 
   expectSchemaShape(t, expected).from(actual);
 });
@@ -174,9 +171,6 @@ test("users insert schema w/ defaults", (t) => {
     role: Schema.optional(Schema.Literal("admin", "user")),
   });
 
-  type a = Simplify<Schema.Schema.Type<typeof actual>>;
-  type b = Simplify<Schema.Schema.Type<typeof actual>>;
-
   expectSchemaShape(t, expected).from(actual);
 });
 
@@ -195,9 +189,6 @@ test("users select schema w/ defaults", (t) => {
     text: (Schema.NullOr(Schema.String.pipe(Schema.maxLength(255)))),
     role: (Schema.Literal("admin", "user")),
   });
-
-  type a = Simplify<Schema.Schema.Type<typeof actual>>;
-  type b = Simplify<Schema.Schema.Type<typeof actual>>;
 
   expectSchemaShape(t, expected).from(actual);
 });
