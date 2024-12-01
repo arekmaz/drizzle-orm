@@ -170,8 +170,13 @@ type Json =
   | readonly Json[]
   | null;
 
-export const Json = Schema.parseJson<Json, Json, never>(
-  Schema.Any
+export const Json = Schema.suspend(
+  (): Schema.Schema<Json> =>
+    Schema.Union(
+      literalSchema,
+      Schema.Array(Json),
+      Schema.Record({ key: Schema.String, value: Json }),
+    ),
 );
 
 type GetSchemaForType<TColumn extends Drizzle.Column> =
@@ -392,16 +397,10 @@ export function createInsertSchema<
   }
 
   for (const [name, column] of columnEntries) {
-    if (!column.notNull) {
-      schemaEntries[name] = Schema.optionalWith(
-        schemaEntries[name] as Schema.Schema.All,
-        { nullable: true },
+    if (!column.notNull || column.hasDefault) {
+      schemaEntries[name] = Schema.optional(
+        Schema.NullOr(schemaEntries[name] as Schema.Schema.All),
       ) as any;
-    } else if (column.hasDefault) {
-      schemaEntries[name] = Schema.optionalWith(
-        schemaEntries[name] as Schema.Schema.All,
-        { nullable: true },
-      );
     }
   }
 
@@ -455,8 +454,9 @@ export function createSelectSchema<
 
   for (const [name, column] of columnEntries) {
     if (!column.notNull) {
-      schemaEntries[name] = 
-        Schema.NullOr(schemaEntries[name] as Schema.Schema.All)
+      schemaEntries[name] = Schema.NullOr(
+        schemaEntries[name] as Schema.Schema.All,
+      );
     }
   }
 

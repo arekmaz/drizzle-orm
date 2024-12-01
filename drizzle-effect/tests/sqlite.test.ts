@@ -88,7 +88,7 @@ test("users insert invalid text length", () => {
 test("users insert schema", (t) => {
   const actual = createInsertSchema(users, {
     id: ({ id }) => id.pipe(Schema.positive()),
-      // without this ovverride I'm getting max call stack exc in tests
+    // without this ovverride I'm getting max call stack exc in tests
     blobJson: blobJsonSchema,
     role: Schema.Literal("admin", "manager", "user"),
   });
@@ -110,9 +110,7 @@ test("users insert schema", (t) => {
   };
 
   const expected = Schema.Struct({
-    id: Schema.optionalWith(Schema.Number.pipe(Schema.positive()), {
-      nullable: true,
-    }),
+    id: Schema.optional(Schema.NullOr(Schema.Number.pipe(Schema.positive()))),
     boolean: Schema.Boolean,
     blobJson: blobJsonSchema,
     blobBigInt: Schema.BigIntFromSelf,
@@ -120,12 +118,12 @@ test("users insert schema", (t) => {
     createdAt: Schema.DateFromSelf,
     createdAtMs: Schema.DateFromSelf,
     real: Schema.Number,
-    text: Schema.optionalWith(Schema.String.pipe(Schema.maxLength(255)), {
-      nullable: true,
-    }),
-    role: Schema.optionalWith(Schema.Literal("admin", "manager", "user"), {
-      nullable: true,
-    }),
+    text: Schema.optional(
+      Schema.NullOr(Schema.String.pipe(Schema.maxLength(255))),
+    ),
+    role: Schema.optional(
+      Schema.NullOr(Schema.Literal("admin", "manager", "user")),
+    ),
   });
 
   expectSchemaShape(t, expected).from(actual);
@@ -135,7 +133,7 @@ test("users insert schema w/ defaults", (t) => {
   const actual = createInsertSchema(users);
 
   const expected = Schema.Struct({
-    id: Schema.optionalWith(Schema.Number, {nullable: true}),
+    id: Schema.optional(Schema.NullOr(Schema.Number)),
     boolean: Schema.Boolean,
     blobJson: Json,
     blobBigInt: Schema.BigIntFromSelf,
@@ -143,14 +141,14 @@ test("users insert schema w/ defaults", (t) => {
     createdAt: Schema.DateFromSelf,
     createdAtMs: Schema.DateFromSelf,
     real: Schema.Number,
-    text: Schema.optionalWith(
-      (Schema.String.pipe(Schema.maxLength(255))), {nullable: true}
+    text: Schema.optional(
+      Schema.NullOr(Schema.String.pipe(Schema.maxLength(255))),
     ),
-    role: Schema.optionalWith(Schema.Literal("admin", "user"), {nullable: true}),
+    role: Schema.optional(Schema.NullOr(Schema.Literal("admin", "user"))),
   });
 
-  type a = Simplify<Schema.Schema.Type<typeof actual>>
-  type b = Simplify<Schema.Schema.Type<typeof actual>>
+  type a = Simplify<Schema.Schema.Type<typeof actual>>;
+  type b = Simplify<Schema.Schema.Type<typeof actual>>;
 
   expectSchemaShape(t, expected).from(actual);
 });
@@ -171,13 +169,13 @@ test("users select schema w/ defaults", (t) => {
     role: Schema.Literal("admin", "user"),
   });
 
-  type a = Simplify<Schema.Schema.Type<typeof actual>>
-  type b = Simplify<Schema.Schema.Type<typeof actual>>
+  type a = Simplify<Schema.Schema.Type<typeof actual>>;
+  type b = Simplify<Schema.Schema.Type<typeof actual>>;
 
   expectSchemaShape(t, expected).from(actual);
 });
 
-test.only("users select schema", (t) => {
+test("users select schema", (t) => {
   const actual = createSelectSchema(users, {
     blobJson: Json,
     role: Schema.Literal("admin", "manager", "user"),
@@ -201,12 +199,12 @@ test.only("users select schema", (t) => {
 
   const expected = Schema.Struct({
     id: Schema.Number,
+    boolean: Schema.Boolean,
     blobJson: Json,
     blobBigInt: Schema.BigIntFromSelf,
     numeric: Schema.String,
     createdAt: Schema.DateFromSelf,
     createdAtMs: Schema.DateFromSelf,
-    boolean: Schema.Boolean,
     real: Schema.Number,
     text: Schema.NullOr(Schema.String.pipe(Schema.maxLength(255))),
     role: Schema.Literal("admin", "manager", "user"),
