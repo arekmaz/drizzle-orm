@@ -397,9 +397,21 @@ export function createInsertSchema<
   }
 
   for (const [name, column] of columnEntries) {
-    if (!column.notNull || column.hasDefault) {
+    if (!column.notNull) {
+      // if a field isn't marked as not null,
+      // it can be missing or null on insert
       schemaEntries[name] = Schema.optional(
         Schema.NullOr(schemaEntries[name] as Schema.Schema.All),
+      );
+
+      continue;
+    }
+
+    if (column.hasDefault) {
+      // not null does not accept null on inserts,
+      // doesn't matter if it has a default value
+      schemaEntries[name] = Schema.optional(
+        schemaEntries[name] as Schema.Schema.All,
       ) as any;
     }
   }

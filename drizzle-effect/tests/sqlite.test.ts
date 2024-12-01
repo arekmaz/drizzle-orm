@@ -110,7 +110,7 @@ test("users insert schema", (t) => {
   };
 
   const expected = Schema.Struct({
-    id: Schema.optional(Schema.NullOr(Schema.Number.pipe(Schema.positive()))),
+    id: Schema.optional(Schema.Number.pipe(Schema.positive())),
     boolean: Schema.Boolean,
     blobJson: blobJsonSchema,
     blobBigInt: Schema.BigIntFromSelf,
@@ -121,10 +121,37 @@ test("users insert schema", (t) => {
     text: Schema.optional(
       Schema.NullOr(Schema.String.pipe(Schema.maxLength(255))),
     ),
-    role: Schema.optional(
-      Schema.NullOr(Schema.Literal("admin", "manager", "user")),
-    ),
+    role: Schema.optional(Schema.Literal("admin", "manager", "user")),
   });
+
+  type a = Simplify<Schema.Schema.Type<typeof actual>>;
+  type actual = {
+    readonly id?: number | undefined;
+    readonly blobJson: {
+      readonly foo: string;
+    };
+    readonly blobBigInt: bigint;
+    readonly numeric: string;
+    readonly createdAt: Date;
+    readonly createdAtMs: Date;
+    readonly real: number;
+    readonly text?: string | null | undefined;
+    readonly role?: "admin" | "user" | "manager" | undefined;
+  };
+  type expected = {
+    readonly id?: number | null | undefined;
+    readonly blobJson: {
+      readonly foo: string;
+    };
+    readonly blobBigInt: bigint;
+    readonly numeric: string;
+    readonly createdAt: Date;
+    readonly createdAtMs: Date;
+    readonly real: number;
+    readonly text?: string | null | undefined;
+    readonly role?: "admin" | "user" | "manager" | null | undefined;
+  };
+  type b = Simplify<Schema.Schema.Type<typeof expected>>;
 
   expectSchemaShape(t, expected).from(actual);
 });
@@ -133,7 +160,7 @@ test("users insert schema w/ defaults", (t) => {
   const actual = createInsertSchema(users);
 
   const expected = Schema.Struct({
-    id: Schema.optional(Schema.NullOr(Schema.Number)),
+    id: Schema.optional(Schema.Number),
     boolean: Schema.Boolean,
     blobJson: Json,
     blobBigInt: Schema.BigIntFromSelf,
@@ -144,7 +171,7 @@ test("users insert schema w/ defaults", (t) => {
     text: Schema.optional(
       Schema.NullOr(Schema.String.pipe(Schema.maxLength(255))),
     ),
-    role: Schema.optional(Schema.NullOr(Schema.Literal("admin", "user"))),
+    role: Schema.optional(Schema.Literal("admin", "user")),
   });
 
   type a = Simplify<Schema.Schema.Type<typeof actual>>;
@@ -165,8 +192,8 @@ test("users select schema w/ defaults", (t) => {
     createdAt: Schema.DateFromSelf,
     createdAtMs: Schema.DateFromSelf,
     real: Schema.Number,
-    text: Schema.NullOr(Schema.String.pipe(Schema.maxLength(255))),
-    role: Schema.Literal("admin", "user"),
+    text: (Schema.NullOr(Schema.String.pipe(Schema.maxLength(255)))),
+    role: (Schema.Literal("admin", "user")),
   });
 
   type a = Simplify<Schema.Schema.Type<typeof actual>>;
