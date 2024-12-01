@@ -205,7 +205,7 @@ test('insert schema', (t) => {
     json: Json,
     mediumint: Schema.Number,
     real: Schema.Number,
-    serial: Schema.optional(Schema.NullOr(Schema.Number)),
+    serial: Schema.optional((Schema.Number)),
     smallint: Schema.Number,
     text: Schema.String,
     textEnum: Schema.Literal('a', 'b', 'c'),
@@ -223,7 +223,7 @@ test('insert schema', (t) => {
     varchar: Schema.String.pipe(Schema.maxLength(200)),
     varcharEnum: Schema.Literal('a', 'b', 'c'),
     year: Schema.Number,
-    autoIncrement: Schema.optional(Schema.NullOr(Schema.Number)),
+    autoIncrement: Schema.optional((Schema.Number)),
   });
 
   expectSchemaShape(t, expected).from(actual);
