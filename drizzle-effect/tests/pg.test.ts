@@ -127,15 +127,15 @@ test('users insert schema', (t) => {
 
   const expected = Schema.Struct({
     a: Schema.optional(Schema.NullOr(Schema.Array(Schema.Number))),
-    id: Schema.optional(Schema.NullOr(Schema.Number.pipe(Schema.positive()))),
+    id: Schema.optional((Schema.Number.pipe(Schema.positive()))),
     name: Schema.optional(Schema.NullOr(Schema.String)),
     email: Schema.String.pipe(Schema.pattern(emailRegex)),
     birthdayString: Schema.String,
     birthdayDate: Schema.DateFromSelf,
-    createdAt: Schema.optional(Schema.NullOr(Schema.DateFromSelf)),
+    createdAt: Schema.optional((Schema.DateFromSelf)),
     role: Schema.Literal('admin', 'user'),
     roleText: Schema.Literal('user', 'manager', 'admin'),
-    roleText2: Schema.optional(Schema.NullOr(Schema.Literal('admin', 'user'))),
+    roleText2: Schema.optional((Schema.Literal('admin', 'user'))),
     profession: Schema.String.pipe(Schema.maxLength(20)),
     initials: Schema.String.pipe(Schema.maxLength(2)),
   });
@@ -148,15 +148,15 @@ test('users insert schema w/ defaults', (t) => {
 
   const expected = Schema.Struct({
     a: Schema.optional(Schema.NullOr(Schema.Array(Schema.Number))),
-    id: Schema.optional(Schema.NullOr(Schema.Number)),
+    id: Schema.optional((Schema.Number)),
     name: Schema.optional(Schema.NullOr(Schema.String)),
     email: Schema.String,
     birthdayString: Schema.String,
     birthdayDate: Schema.DateFromSelf,
-    createdAt: Schema.optional(Schema.NullOr(Schema.DateFromSelf)),
+    createdAt: Schema.optional((Schema.DateFromSelf)),
     role: Schema.Literal('admin', 'user'),
     roleText: Schema.Literal('admin', 'user'),
-    roleText2: Schema.optional(Schema.NullOr(Schema.Literal('admin', 'user'))),
+    roleText2: Schema.optional((Schema.Literal('admin', 'user'))),
     profession: Schema.String.pipe(Schema.maxLength(20)),
     initials: Schema.String.pipe(Schema.maxLength(2)),
   });
